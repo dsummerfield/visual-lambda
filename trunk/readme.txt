@@ -33,6 +33,8 @@ Refresh View                            F5
 
 Reduce Selected                         Enter
 
+Nonstop reduction                       Ctrl+Enter
+
 
 Modes of reduction
     Applicative/Normal                  Alt+A
@@ -41,8 +43,6 @@ Modes of reduction
     
     Quick Mode                          Q
         Pick for reduction
-
-    View Modes                          F1
 
 
 Construction of terms

@@ -13,6 +13,9 @@ def mix( k, a, b ):
     return a*(1-k) + b*k
 
 
+def maxsize( a, b ):
+    return max( a[0], b[0] ), max( a[1], b[1] )
+
 
 def first( generator ):
     "Get first value of generator  or  None"

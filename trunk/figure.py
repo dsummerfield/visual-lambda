@@ -756,3 +756,6 @@ class Figure( FieldItem ):
         for noke in nokes:
             for n in self.pick( matrix, cursor, noke ):
                 yield n
+
+
+

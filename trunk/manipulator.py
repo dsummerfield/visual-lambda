@@ -92,6 +92,15 @@ def needSelectedFigure( eventProc ):
     return standartEventProc
 
 
+def assertNoEating( eventProc ):
+    
+    def standartEventProc( self, figure, noke ):
+        if not figure.eating:
+            return eventProc( self, figure, noke )
+        
+    return standartEventProc
+
+
 def rebuildAfter( eventProc ):
     
     def standartEventProc( self ):
@@ -105,6 +114,18 @@ def rebuildAfter( eventProc ):
     return standartEventProc
 
 
+def stopNonstop( eventProc ):
+    
+    def standartEventProc( self ):
+        if self.nonstop:
+            self.nonstop = False
+            debug(4, "stop nonstop!")
+        else:
+            return eventProc( self )        # Do eventProc
+    
+    return standartEventProc
+
+
 
 class Manipulator( Window ):
 
@@ -114,65 +135,24 @@ class Manipulator( Window ):
 
 
         dirChilds = Vector2( (-1,0) )
-        #print "dirChilds", dirChilds
 
         
         self.items = []
         
         
-        #self.items.append( Figure('\\a b c d. a (b c) d') )
-        #self.items.append( Figure('\\a b. a b (d d)') )
-        #self.items.append( Figure('a (a (a a))') )
-        #self.items.append( Figure('a (a a a (a a a a) a (a a))') )
-        #self.items.append( Figure('f (x (f f y) (f f z)) (t w)') )
-        #self.items.append( Figure('f (x (\\f. f (\\a f. a (a a)) f) (f f z)) (t w)') )
-        #self.items.append( Figure('f (x (f) (f f z)) (t w)') )
-        #self.items.append( Figure('f (f z)') )
-        #self.items.append( Figure('f (f z) w') )
-        #self.items.append( Figure('f (x (/a. a a))') )
-        #self.items.append( Figure('\\a. a (a a a a a a)') )
-        #self.items.append( Figure('b (b ((\\a. a a) c)) d') )
-        #y = lambdaparser.parse('\\f. W (\\x. f (x x))').withRoot()
-        #y.reduceStep()
-        #y = y.expr
-        #self.items.append( Figure( y ) )
-        #self.items.append( Figure('W W') )
-        #self.items.append( Figure('I a b c') )
-        #self.items.append( Figure('\\x. (\\x. x x) x') )
-        #self.items.append( Figure('FACT 3') )
-        #self.items.append( Figure('a (\\x. W (a (b x)) (x x))') )
-        #self.items.append( Figure('\\x. I (x (x x)) (x x)') )
-        #self.items.append( Figure('\\x. (\\x y z w. x) x') )
-        #self.items.append( Figure('\\x. x (W (x x)) x') )
-        #self.items.append( Figure('\\y. y (\\x. x (W (x W)) x)') )
-        #self.items.append( Figure('\\x. x (I (x x x)) x') )
-        #self.items.append( Figure('\\x. x ((\\y. (\\z. z y) y) (x x)) x') )
-        #self.items.append( Figure('\\x. (\\y. (\\z. z y) y) (x x)') )
-        #self.items.append( Figure('\\x. (\\x. (\\y. y x) x) (x x) x') )
-        #self.items.append( Figure('\\x y. x (x y)') )
-        #self.items.append( Figure('(\y. (\\x. x (x y)) ( (\\x. x (x y)) (\\x. x (x y)) ) )') )
-        #self.items.append( Figure('\\x. x (\\x y. x x) (I I I)') )
+        # Load default workspace
+        filename = config.get( 'workspace', 'default.xml' )
+        if filename:
+            if not saving.load( self, filename ):
+                print "Can't open default workspace"
         
-        #self.items.append( Figure('FACT 3') )
-        
-        #self.items.append( Figure('I') )
-        #self.items.append( Figure('I') )
-        #self.items.append( Figure('Y') )
-        #self.items.append( Figure('x (f (f y))') )
-        #self.items.append( Figure('FST (\\x. x I W)') )
-        self.items.append( Figure('MULT 3 2') )
-        #self.items.append( Figure('POW 3 2') )
-        #self.items.append( Figure('PRED 3') )
-        #self.items.append( Figure('let a= I b in a') )
-        
-        self.items.append( TextItem('MULT 3 2') )
-        
+
         
         self.expandMatrix = TransformMatrix()
         self.expandMatrix.setExpand( Figure.expandCoef )
 
         self.viewMatrix = None
-        self.viewMatrix = self.defaultView( self.size, 50 )
+        self.viewMatrix = self.defaultView( self.size, 35 )
 
 
         self.selection = Selection( None )
@@ -180,13 +160,19 @@ class Manipulator( Window ):
         self.dragPos   = None               # Start drag position
 
 
-        self.mode = let.Mode()      # Mode of reduction
+        self.mode = let.Mode()              # Mode of reduction
         
-        self.quick = False  # Quick Reduction
+        self.quick = False                  # Quick Reduction
         self.cursors = ( cursors.arrow, cursors.finger )
         self.setCursor( self.cursors[ int( self.quick ) ] )
         
+        self.nonstop = False                # Nonstop reduction mode
+        
         self.showInfo = True
+        
+        
+        # Drawing 
+        self.boldLambda = int( config.get( 'bold_lambda', 0 ) )
 
         
         
@@ -194,7 +180,8 @@ class Manipulator( Window ):
                             K_d:            self.eventDeleteItem,
                             K_c:            self.eventCopyItem,
         
-                            K_RETURN:       self.eventReduce,
+                            K_RETURN:       { KMOD_CTRL:    self.eventNonstop,
+                                              None:         self.eventReduce },
 
                             K_BACKSPACE:    self.eventUndo,
                             K_z:            { KMOD_CTRL:    self.eventUndo },
@@ -238,35 +225,40 @@ class Manipulator( Window ):
         self.toolbars = []
 
         ims = toolbar.ImageSet( 'icons.gif', (48,48) )
-        toolbar.ToolbarItem.font = self.font
+        
+        # Create font for Menus
+        fontsize = int( config.get( 'fontsize' ) )  or  11
+        toolbar.ToolbarItem.fontsize = fontsize
+        toolbar.ToolbarItem.font     = pygame.font.SysFont( 'lucidaconsole', fontsize )
         
         left = toolbar.Toolbar( toolbar.LEFT )
-        left.add( self.eventInputItem,          'Input Item' )
-        left.add( None,                         ''  )
-        left.add( None,                         'Reduction'  )
-        left.add( self.eventModeStrategy,       ' Normal order',     ' Applicative', lambda:self.mode.applicative )
-        left.add( self.eventModeLazy,           ' Pure Lambda',      ' Lazy',        lambda:self.mode.lazy )
-        left.add( self.eventModeBySelection,    ' whole expression', ' in selection',        lambda:self.mode.redex )
-        left.add( None,                         ''  )
-        left.add( self.eventSave,               'Save' )
-        left.add( self.eventLoad,               'Load' )
+        left.add( self.eventInputItem,              'Input Item from console (I)',   'Input Item' )
+        left.add( None, None, '' )
+        left.add( None, None, 'Reduction' )
+        left.add( self.eventModeStrategy,           'Toggle reduction strategy (Alt+A)',    ' Normal order',     ' Applicative',  lambda:self.mode.applicative )
+        left.add( self.eventModeLazy,               'Toggle calculus (Alt+L, Alt+P)',       ' Pure Lambda',      ' Lazy',         lambda:self.mode.lazy )
+        left.add( self.eventModeBySelection,        'Reduction inside selection only or thw whole expression (Alt+S)',  
+                                                                           ' whole expression', ' in selection', lambda:self.mode.redex )
+        left.add( None, None, '' )
+        left.add( self.eventSave,                   'Save Workspace. Input file name from console. (Ctrl+S)',  'Save' )
+        left.add( self.eventLoad,                   'Load Workspace. Input file name from console. (Ctrl+O)',  'Load' )
         self.toolbars.append( left )
     
         right = toolbar.Toolbar( toolbar.RIGHT )
-        right.add( self.eventModeQuick,             (ims,2,1), (ims,2,2), lambda:self.quick )
-        right.add( self.eventAddVariable,           (ims,0,0) )
-        right.add( self.eventAddApplicationBefore,  (ims,0,1) )
-        right.add( self.eventAddApplicationAfter,   (ims,0,2) )
-        right.add( self.eventAddLambda,             (ims,1,2) )
-        right.add( self.eventDeleteNode,            (ims,1,1) )
-        right.add( self.eventDeleteItem,            (ims,1,0) )
-        right.add( self.eventCopyItem,              (ims,2,0) )
+        right.add( self.eventModeQuick,             'Quick mode: Pick for reducion. (Q)',           (ims,2,1), (ims,2,2), lambda:self.quick )
+        right.add( self.eventAddVariable,           'Add a free variable to workspace (V)',         (ims,0,0) )
+        right.add( self.eventAddApplicationBefore,  'Add application before selection (Insert, A)', (ims,0,1) )
+        right.add( self.eventAddApplicationAfter,   'Add application after selection (Ctrl+Insert, Ctrl+A)', (ims,0,2) )
+        right.add( self.eventAddLambda,             'Add lambda bubble (Alt+Insert, L)',            (ims,1,2) )
+        right.add( self.eventDeleteNode,            'Delete selected bubbles (Delete)',             (ims,1,1) )
+        right.add( self.eventDeleteItem,            'Delete selected item (D)',                     (ims,1,0) )
+        right.add( self.eventCopyItem,              'Copy selected item (C)',                       (ims,2,0) )
         self.toolbars.append( right )
 
         bottom = toolbar.Toolbar( toolbar.BOTTOM )
-        bottom.add( self.eventUndo,                 (ims,3,1) )
-        bottom.add( self.eventReduce,               (ims,3,0) )
-        bottom.add( self.eventRedo,                 (ims,3,2) )
+        bottom.add( self.eventUndo,                 'Undo (Ctrl+Z, Alt+Left, Backspace)',           (ims,3,1) )
+        bottom.add( self.eventReduce,               'Reduce selected figure (Enter)',               (ims,3,0) )
+        bottom.add( self.eventRedo,                 'Redo (Ctrl+Y, Alt+Right)',                     (ims,3,2) )
         self.toolbars.append( bottom )
 
 
@@ -318,7 +310,6 @@ class Manipulator( Window ):
                 -r < pos[0] < size[0]+r  and  \
                 -r < pos[1] < size[1]+r
         
-
 
     def circle( self, surface, pos, r, col=None, width=1 ):
 
@@ -421,7 +412,9 @@ class Manipulator( Window ):
 
                 
             # Stroke
-            self.circle( surface, pos,r, stroke, isVar and 1 or 1 )
+            width = self.boldLambda and not isVar and 2  or  1
+            self.circle( surface, pos,r, stroke, width )
+
 
         return True
 
@@ -512,6 +505,16 @@ class Manipulator( Window ):
 
 
     # View Matrix
+
+    def centerOfView( self ):
+        "Returns the center of view according to viewMatrix"
+
+        cx = self.size[0] * 0.5
+        cy = self.size[1] * 0.5
+        
+        return self.viewMatrix.inversion * Vector( (cx,cy,0,1) )
+        
+
     
     def defaultView( self, size, scale= None ):
     
@@ -526,7 +529,6 @@ class Manipulator( Window ):
     
         return t * r
 
-    
     
     def zoomView( self, pos, button ):
         
@@ -668,6 +670,8 @@ class Manipulator( Window ):
                     item = self.pickToolbarItem( pos )
                     if item != toolbar.ToolbarItem.highlighted:
                         toolbar.ToolbarItem.highlighted = item
+                        if self.showInfo and item and item.tip:
+                            print 'tip:', item.tip
                         redraw = True
 
                 if redraw:
@@ -723,12 +727,23 @@ class Manipulator( Window ):
     # Event Procs
 
     def eventInputItem( self ):
+
+        # Get Item
         expression = self.consoleInput('Input Expression >> ')
-        if expression[0] in ('"',"'"):
-            self.items.insert( 0, TextItem( eval(expression) ) )
-        else:
-            self.items.insert( 0, Figure( expression ) )
-        self.invalidate()
+        if expression:        
+            if expression[0] in ('"',"'"):
+                item = TextItem( eval(expression) )
+            else:
+                item = Figure( expression )
+    
+            # Set position to center of view
+            v = self.centerOfView()
+            item.position.setTranspose( v[0],v[1], 1 )
+            item.refreshTransform()
+            
+            self.items.insert( 0, item )
+            self.invalidate()
+
     
     @needSelectedItem
     def eventCopyItem( self, item ):
@@ -747,14 +762,26 @@ class Manipulator( Window ):
 
 
 
+    @stopNonstop
     @needSelectedFigure
+    @assertNoEating
     def eventReduce( self, figure, noke ):
-        if not figure.eating:
-            if self.reduce( figure ):
-                self.invalidate()
+        if self.reduce( figure ):
+            self.invalidate()
+    
+    @stopNonstop
+    @needSelectedFigure
+    @assertNoEating
+    def eventNonstop( self, figure, noke ):
+        self.nonstop = True
+        if self.reduce( figure ):
+            self.invalidate()
+
+
 
     @rebuildAfter
     @needSelectedFigure
+    @assertNoEating
     def eventUndo( self, figure, noke ):
         expression = figure.history.undo()
         if expression:
@@ -765,6 +792,7 @@ class Manipulator( Window ):
 
     @rebuildAfter
     @needSelectedFigure
+    @assertNoEating
     def eventRedo( self, figure, noke ):
         expression = figure.history.redo()
         if expression:
@@ -786,6 +814,7 @@ class Manipulator( Window ):
 
     @rebuildAfter
     @needSelectedFigure
+    @assertNoEating
     def eventDeleteNode( self, figure, noke ):
         construct.delete( noke.node )
         figure.history.step( figure.expression.copy() )
@@ -794,6 +823,7 @@ class Manipulator( Window ):
 
     @rebuildAfter
     @needSelectedFigure
+    @assertNoEating
     def eventAddLambda( self, figure, noke ):
         abs = construct.addLambda( noke.node )
         figure.history.step( figure.expression.copy() )
@@ -803,6 +833,7 @@ class Manipulator( Window ):
 
     @rebuildAfter
     @needSelectedFigure
+    @assertNoEating
     def eventAddApplicationBefore( self, figure, noke ):
         construct.applicationBefore( noke.node )
         figure.history.step( figure.expression.copy() )
@@ -811,6 +842,7 @@ class Manipulator( Window ):
 
     @rebuildAfter
     @needSelectedFigure
+    @assertNoEating
     def eventAddApplicationAfter( self, figure, noke ):
         construct.applicationAfter( noke.node )
         figure.history.step( figure.expression.copy() )
@@ -819,18 +851,26 @@ class Manipulator( Window ):
 
 
     def eventAddVariable( self ):
-        self.items.insert( 0, Figure( let.Variable() ) )
+        fig = Figure( let.Variable() )
+
+        # Set position to center of view
+        v = self.centerOfView()
+        fig.position.setTranspose( v[0],v[1], 1 )
+        fig.refreshTransform()
+        
+        self.items.insert( 0, fig )
         self.invalidate()
 
 
     def eventLoad( self ):
-        filename = self.consoleInput('Load Workspace >> ')
-        if saving.load( self, filename ):
+        filename = self.consoleInput('Load Workspace >> ')        
+        if filename and saving.load( self, filename ):
             self.invalidate()
 
     def eventSave( self ):
         filename = self.consoleInput('Save Workspace >> ')
-        saving.save( self, filename )
+        if filename:
+            saving.save( self, filename )
 
     def eventSaveScreen( self ):
         pygame.image.save( self.getSurface(), 'screen_%s.bmp' % strDate() )
@@ -850,7 +890,11 @@ class Manipulator( Window ):
 
     def eventViewHelp( self ):
         self.showInfo ^= True
-        self.invalidate()
+        if self.showInfo:
+            print 'Show Tips'
+        else:
+            print "Don't show Tips"
+        #self.invalidate()
 
     def eventModeStrategy( self ):
         self.mode.applicative ^= True
@@ -874,6 +918,8 @@ class Manipulator( Window ):
     def eventExportMode( self ):
         Enduring.exportMode ^= True
         debug( 1, "Export Mode:", Enduring.exportMode )
+
+
 
 
     def pick( self, pos, figuresOnly= False ):
@@ -1052,6 +1098,10 @@ class Manipulator( Window ):
                 self.postReduce( figure )
                 return True
 
+        else:
+            self.nonstop = False
+            
+
 
 
     def afterEating( self, figure ):
@@ -1097,6 +1147,9 @@ class Manipulator( Window ):
         # Step of History
         figure.history.step( figure.expression.copy() )
     
+        if self.nonstop:
+            self.reduce( figure )
+            
     
     
     def pickToolbarItem( self, pos ):        

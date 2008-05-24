@@ -1,6 +1,8 @@
 
 
-import pygame
+import  pygame
+
+from    common      import  *
 
 
 
@@ -48,12 +50,15 @@ class ToolbarItem:
     highlighted = None      # single highlighted ToolbarItem
     
     font        = None
+    fontsize    = 0
     
     
-    def __init__( self, callback, *args ):
+    def __init__( self, callback, tip, *args ):
 
         self.callback = callback
         self.size     = 16,16
+        
+        self.tip      = tip
         
         self.toggle   = 3==len( args ) and args[2]      # Function of getting toggled value
 
@@ -67,13 +72,13 @@ class ToolbarItem:
             
             if type( arg ) is tuple:       # (ImageSet,i,j)
                 ims,i,j = arg
-                self.size = ims.size
+                self.size = maxsize( self.size, ims.size )
                 self.states.append( (ims,(i,j)) )
                 
             else:                       # String
                 text = ToolbarItem.font.render( arg, False, (0,0,0) )
                 #self.size = text.get_size()
-                self.size = text.get_size()[0], 16
+                self.size = maxsize( self.size, ( text.get_size()[0], ToolbarItem.fontsize * 7//5 ) )
                 self.states.append( text )
 
 

@@ -245,7 +245,7 @@ class Manipulator( Window ):
         self.toolbars.append( left )
     
         right = toolbar.Toolbar( toolbar.RIGHT )
-        right.add( self.eventModeQuick,             'Quick mode: Pick for reducion. (Q)',           (ims,2,1), (ims,2,2), lambda:self.quick )
+        right.add( self.eventModeQuick,             'Quick mode: Pick for reduction. (Q)',          (ims,2,1), (ims,2,2), lambda:self.quick )
         right.add( self.eventAddVariable,           'Add a free variable to workspace (V)',         (ims,0,0) )
         right.add( self.eventAddApplicationBefore,  'Add application before selection (Insert, A)', (ims,0,1) )
         right.add( self.eventAddApplicationAfter,   'Add application after selection (Ctrl+Insert, Ctrl+A)', (ims,0,2) )

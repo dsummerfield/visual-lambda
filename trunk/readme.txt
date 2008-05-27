@@ -15,7 +15,7 @@ Items
     Input from console                  I
         Examples:
             >> \\x y. (\\x. x)
-            >> FACT 3 (see library.py)
+            >> FACT 3                   (see library.txt)
             >> "Label"
     
     Select, Drag                        Left mouse button
@@ -32,7 +32,6 @@ Refresh View                            F5
 
 
 Reduce Selected                         Enter
-
 Nonstop reduction                       Ctrl+Enter
 
 

@@ -40,12 +40,14 @@ def save( manipulator, filename ):
 
         items.appendChild( item )
 
+    try:
+        f = open( filename, "w" )
+        doc.writexml( f, addindent=' ', newl='\n' )
+        f.close()
+        debug('save', 'saved to', filename )
+    except:
+        print "Error. Can't write to", filename
 
-    f = open( filename, "w" )
-    doc.writexml( f, addindent=' ', newl='\n' )
-    f.close()
-
-    debug('save', 'saved to', filename )
     
 
     

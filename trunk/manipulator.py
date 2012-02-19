@@ -754,7 +754,8 @@ class Manipulator( Window ):
 
     @needSelectedItem
     def eventDeleteItem( self, item ):
-        self.items.remove( self.selection.item )
+        if self.selection.item in self.items:
+            self.items.remove( self.selection.item )
         self.selection = Selection( None )
         if self.items:
             self.selection = Selection( self.items[0] )

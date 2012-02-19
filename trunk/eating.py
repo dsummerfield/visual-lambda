@@ -7,7 +7,7 @@ from    figure      import  *
 
 from    matrix      import  *
 
-from    let         import  Let
+from    let         import  Application, Let
 from    noke        import  *
 
 
@@ -143,13 +143,14 @@ class Fading( Enduring ):
 
         # Nodes of Redex
         abs  = self.act.abs
-        appl = self.act.abs.parent
+        appl = self.act.appl
 
         # Replace Redex (Appl and Abs) with new created Let
         let = Let( be= None, expr= None )
         appl.subst( let )
         let.be   = appl.arg
-        let.expr = appl.func.expr        
+        let.expr = appl.func
+        abs.subst( abs.expr )
         # let.expr.replace( {abs: let} ) -- 
         # Do not reref to Let. Else we will go through let-bound vars at down.bubblesDraw()
 
@@ -484,6 +485,10 @@ class Act:
         self.abs      = abs
         self.callback = callback
         self.letnoke  = None    # for Figure.afterEating()
+        self.appl     = abs.parent
+        while not isinstance( self.appl, Application ):
+            assert isinstance( self.appl, Let )
+            self.appl = self.appl.parent
 
         debug( 'eat', 'init Eating. abs:', abs )
         

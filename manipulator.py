@@ -237,7 +237,7 @@ class Manipulator( Window ):
         left.add( None, None, 'Reduction' )
         left.add( self.eventModeStrategy,           'Toggle reduction strategy (Alt+A)',    ' Normal order',     ' Applicative',  lambda:self.mode.applicative )
         left.add( self.eventModeLazy,               'Toggle calculus (Alt+L, Alt+P)',       ' Pure Lambda',      ' Lazy',         lambda:self.mode.lazy )
-        left.add( self.eventModeBySelection,        'Reduction inside selection only or thw whole expression (Alt+S)',  
+        left.add( self.eventModeBySelection,        'Reduction inside selection only or the whole expression (Alt+S)',  
                                                                            ' whole expression', ' in selection', lambda:self.mode.redex )
         left.add( None, None, '' )
         left.add( self.eventSave,                   'Save Workspace. Input file name from console. (Ctrl+S)',  'Save' )

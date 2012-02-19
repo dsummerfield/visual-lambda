@@ -224,7 +224,7 @@ class Manipulator( Window ):
         
         self.toolbars = []
 
-        ims = toolbar.ImageSet( 'icons.gif', (48,48) )
+        ims = toolbar.ImageSet( 'icons.bmp', (48,48) )
         
         # Create font for Menus
         fontsize = int( config.get( 'fontsize' ) )  or  11

@@ -1,0 +1,5 @@
+#summary Discussion of the visual-lambda project.
+
+= Welcome =
+
+Do you have thoughts about Visual Lambda? Share them here!
